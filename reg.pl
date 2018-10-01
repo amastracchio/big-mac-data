@@ -41,6 +41,7 @@ my $q = CGI->new;
 my $tmp_file_currencies = "/tmp/currencies.tmp";;
 open (FILEGDP,"/root/big-mac-data/big-mac-data/source-data/big-mac-source-data.csv") or die($!);
 open (HTML,">/root/3p/ht/htdocs/big-mac-index.html");
+open (OUTPUT,">/root/3p/ht/htdocs/big-mac-index.csv");
 open (TMP,">$tmp_file_currencies");
 print TMP "<table border=1 summary=\"The table show  the currency tables copyng from source data\"><tr><th>date</th><th>currency_code</th><th>dollar_price</th></tr>\n";
 print HTML "<HTML>";
@@ -143,7 +144,7 @@ foreach  my $fecha (keys %paisgdp){
 				foreach my $cur (@basecurrencies) {
 
 
-					if (defined $base_currencies{$fecha}{$cur}) {
+					if ( (defined $base_currencies{$fecha}{$cur}) and ( defined $base_currencies{$fecha}{$iso_a3}{dollar_price}  )) {
 
 
 						# indice crudo raw
@@ -233,13 +234,21 @@ foreach  my $fecha (keys %paisgdp){
 
 print HTML "<table border=1 summary=\"The table shot the source input data currency code , local price, dollar exchange etc\"><tr><th>date</th><th>iso_a3</th><th>currency_code</th><th>local_price</th><th>dollar_ex</th><th>dollar_price (calculated)</th><th>gdp</th>";
 
+print OUTPUT "date	iso_a3	currency_code	local_price	dollar_ex	dollar_price (calculated)	gdp";
+
 foreach my $cur (@basecurrencies) {
+
 	print HTML "<th> index ".$cur."_adjusted (calculated)</th>";
 	print HTML "<th> index ".$cur."_raw (calculated)</th>";
+
+	print OUTPUT "	index $cur"."_adjusted (calculated)	";
+	print OUTPUT "	index $cur"."_raw (calculated)	";
 }
 
 
 print HTML "</tr>";
+
+print OUTPUT "\n";
 
 # Tenemos que calcular los indices ajustados por moneda. Recorrer de nuevo el hash
 
@@ -268,6 +277,8 @@ foreach  my $fecha (keys %paisgdp){
 
 
 
+my $imgpart;
+
 
 # calculamos los adj_price segun las tablas de currencies
 foreach  my $fecha (keys %paisgdp){
@@ -289,6 +300,9 @@ foreach  my $fecha (keys %paisgdp){
 		foreach my $iso_a3 (keys %{ $paisgdp{$fecha} }){
 
 			print HTML "<tr><td>$fecha</td><td>$iso_a3</td><td>".$paisgdp{$fecha}{$iso_a3}{currency_code}."</td><td>".$paisgdp{$fecha}{$iso_a3}{local_price}."</td><td>".$paisgdp{$fecha}{$iso_a3}{dollar_ex}."</td><td>".$paisgdp{$fecha}{$iso_a3}{dollar_price}."</td><td>".$paisgdp{$fecha}{$iso_a3}{gdp}."</td>";
+
+			print OUTPUT "$fecha\t$iso_a3\t".$paisgdp{$fecha}{$iso_a3}{currency_code}."\t".$paisgdp{$fecha}{$iso_a3}{local_price}."\t".$paisgdp{$fecha}{$iso_a3}{dollar_ex}."\t".$paisgdp{$fecha}{$iso_a3}{dollar_price}."\t".$paisgdp{$fecha}{$iso_a3}{gdp};
+
 
 			if ( (defined $paisgdp{$fecha}{$iso_a3}{dollar_price}) and (defined $paisgdp{$fecha}{$iso_a3}{gdp}) ) {
 				push(@ydata,$paisgdp{$fecha}{$iso_a3}{dollar_price});
@@ -313,19 +327,23 @@ foreach  my $fecha (keys %paisgdp){
 					my $indexkey = $cur ."_adjusted";
 					$paisgdp{$fecha}{$iso_a3}{$indexkey}  = $index ;
 					print HTML $index;
+					print OUTPUT $index;
 
 				 }
 				print HTML "</td>";
+				print OUTPUT "\t";
 				print HTML "<td>";
 				# ARI
 				if ((defined $base_currencies{$fecha}{$cur}) && (defined $paisgdp{$fecha}{$iso_a3}{dollar_price}) ) {
 					my $indexkey = $cur ."_raw";
 					my $index = $paisgdp{$fecha}{$iso_a3}{$indexkey};
 					print HTML $index;
+					print OUTPUT $index;
 				}
 				print HTML "</td>";
 			}
-			print HTML "</tr>";
+			print HTML "</tr>\n";
+			print OUTPUT "\n";
 
 		} #foreach pais
 
@@ -349,10 +367,15 @@ foreach  my $fecha (keys %paisgdp){
 
 
 		   $chart->plot2d($dataSet,$dataSetadj);
+		   $imgpart .= "<img src=\"$fecha.png\">\n";
+
 		}
 
 }
 
+
+print HTML $imgpart;
+print HTML "</table>";
 
 print HTML "</HTML>";
 die Dumper \%paisgdp;
